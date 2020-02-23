@@ -140,7 +140,10 @@ static void PrintUsage(const char *aProgramName, FILE *aStream, int aExitCode)
 {
     fprintf(aStream,
             "Syntax:\n"
-            "    %s [Options] NodeId|Device|Command [DeviceConfig|CommandArgs]\n"
+            "    %s [Options] RadioURL\n"
+            "    RadioURL: URL of the device and method for Thread core and RCP communication.\n"
+            "              'protocols://device-file?connection-parameter1=value1&connection-parameter2=value2'\n"
+            "              e.g. 'spinel+hdlc+uart:///dev/ttyUSB0?baudrate=115200'\n"
             "Options:\n"
             "    -I  --interface-name name     Thread network interface name.\n"
             "    -d  --debug-level             Debug level of logging.\n"
@@ -176,6 +179,67 @@ static void PrintUsage(const char *aProgramName, FILE *aStream, int aExitCode)
             "    -h  --help                    Display this usage information.\n",
             aProgramName);
     exit(aExitCode);
+}
+
+static int ParseUrl(otRadioUrl *info, char *url)
+{
+    char *deviceInfo = strstr(url, "://");
+    char *pStart     = url;
+    char *pEnd       = NULL;
+    char *pMid       = NULL;
+    int   i          = 0;
+    int   j          = 0;
+    int   cProtocol  = sizeof(aProtocol) / sizeof(aProtocol[0]);
+    // int cParameter = sizeof(sConnectPara) / sizeof(sConnectPara[0]);
+
+    if (!deviceInfo)
+    {
+        return -1;
+    }
+
+    while (pEnd != deviceInfo)
+    {
+        pEnd = strstr(pStart, "+");
+        if (!pEnd)
+        {
+            pEnd = deviceInfo;
+        }
+        for (i = 0; i < cProtocol; i++)
+        {
+            if (strncmp(pStart, aProtocol[i], (int)(pEnd - pStart)) == 0)
+            {
+                info->mProtocol[j] = aProtocol[i];
+                j++;
+            }
+        }
+
+        pStart = pEnd + 1;
+    }
+
+    pStart = deviceInfo + 3;
+    pEnd   = strstr(pStart, "?");
+    if (pEnd)
+    {
+        strncpy(info->mDevice, pStart, pEnd - pStart);
+    }
+    else
+    {
+        return -1;
+    }
+
+    pStart = pEnd + 1;
+    while (pStart)
+    {
+        pEnd = strstr(pStart, "&");
+        pMid = strstr(pStart, "=");
+        if (!pEnd)
+        {
+            strcpy(info->mValue, pMid + 1);
+            break;
+        }
+        pStart = pEnd + 1;
+    }
+    return 0;
 }
 
 static void ParseArg(int aArgCount, char *aArgVector[], PosixConfig *aConfig)
@@ -218,7 +282,7 @@ static void ParseArg(int aArgCount, char *aArgVector[], PosixConfig *aConfig)
         case 'n':
             aConfig->mIsDryRun = true;
             break;
-        case 's':
+        case 's': 
         {
             char *endptr = NULL;
 
@@ -284,16 +348,13 @@ static void ParseArg(int aArgCount, char *aArgVector[], PosixConfig *aConfig)
         }
     }
 
-    if (optind >= aArgCount)
+    if (ParseUrl(aConfig->mPlatformConfig.mRadioUrl, aArgVector[optind]) < 0)
     {
         PrintUsage(aArgVector[0], stderr, OT_EXIT_INVALID_ARGUMENTS);
     }
-
-    aConfig->mPlatformConfig.mRadioFile = aArgVector[optind];
-
-    if (optind + 1 < aArgCount)
+    if (optind >= aArgCount)
     {
-        aConfig->mPlatformConfig.mRadioConfig = aArgVector[optind + 1];
+        PrintUsage(aArgVector[0], stderr, OT_EXIT_INVALID_ARGUMENTS);
     }
 }
 
@@ -320,6 +381,7 @@ static otInstance *InitInstance(int aArgCount, char *aArgVector[])
         exit(OT_EXIT_SUCCESS);
     }
 
+    otLoggingSetLevel(config.mLogLevel);
     return instance;
 }
 
