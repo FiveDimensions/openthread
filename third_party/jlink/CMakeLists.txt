@@ -1,5 +1,5 @@
 #
-#  Copyright (c) 2019, The OpenThread Authors.
+#  Copyright (c) 2020, The OpenThread Authors.
 #  All rights reserved.
 #
 #  Redistribution and use in source and binary forms, with or without
@@ -26,67 +26,38 @@
 #  POSSIBILITY OF SUCH DAMAGE.
 #
 
-add_executable(ot-ncp-ftd
-    main.c
+string(REPLACE "-Wundef" "" OT_CFLAGS "${OT_CFLAGS}")
+add_library(jlinkrtt
+    SEGGER_RTT_V640/RTT/SEGGER_RTT.c
 )
 
-add_executable(ot-ncp-mtd
-    main.c
-)
-
-add_executable(ot-rcp
-    main.c
-)
-
-set(COMMON_INCLUDES
-    ${OT_PUBLIC_INCLUDES}
-    ${OT_PRIVATE_INCLUDES}
-    ${PROJECT_SOURCE_DIR}/examples/platforms
-    ${PROJECT_SOURCE_DIR}/src/core
-)
-
-target_include_directories(ot-ncp-ftd PRIVATE ${COMMON_INCLUDES})
-target_include_directories(ot-ncp-mtd PRIVATE ${COMMON_INCLUDES})
-target_include_directories(ot-rcp PRIVATE ${COMMON_INCLUDES})
-
-if(OT_BUILTIN_MBEDTLS)
-    target_link_libraries(ot-ncp-ftd
-        openthread-ncp-ftd
-        ${OT_PLATFORM_LIB}
-        openthread-ftd
-        ${OT_PLATFORM_LIB}
-        mbedcrypto
+if(OT_PLATFORM STREQUAL "nrf52811")
+    target_compile_options(jlinkrtt PRIVATE
+        -DNRF52811_XXAA
+        -DSEGGER_RTT_CONFIG_H=\"${PROJECT_SOURCE_DIR}/third_party/NordicSemiconductor/segger_rtt/SEGGER_RTT_Conf.h\"
+        -DUSE_APP_CONFIG=1
     )
-
-    target_link_libraries(ot-ncp-mtd
-        openthread-ncp-mtd
-        ${OT_PLATFORM_LIB}
-        openthread-mtd
-        ${OT_PLATFORM_LIB}
-        mbedcrypto
+elseif(OT_PLATFORM STREQUAL "nrf52833")
+    target_compile_options(jlinkrtt PRIVATE
+        -DNRF52833_XXAA
+        -DSEGGER_RTT_CONFIG_H=\"${PROJECT_SOURCE_DIR}/third_party/NordicSemiconductor/segger_rtt/SEGGER_RTT_Conf.h\"
+        -DUSE_APP_CONFIG=1
     )
 else()
-    target_link_libraries(ot-ncp-ftd
-        openthread-ncp-ftd
-        ${OT_PLATFORM_LIB}
-        openthread-ftd
-        ${OT_PLATFORM_LIB}
-    )
-
-    target_link_libraries(ot-ncp-mtd
-        openthread-ncp-mtd
-        ${OT_PLATFORM_LIB}
-        openthread-mtd
-        ${OT_PLATFORM_LIB}
+    target_compile_options(jlinkrtt PRIVATE
+        -DNRF52840_XXAA
+        -DSEGGER_RTT_CONFIG_H=\"${PROJECT_SOURCE_DIR}/third_party/NordicSemiconductor/segger_rtt/SEGGER_RTT_Conf.h\"
+        -DUSE_APP_CONFIG=1
     )
 endif()
 
-target_link_libraries(ot-rcp
-    openthread-rcp
-    ${OT_PLATFORM_LIB}
-    openthread-radio
-    ${OT_PLATFORM_LIB}
-)
 
-install(TARGETS ot-rcp ot-ncp-ftd ot-ncp-mtd
-    DESTINATION bin)
+target_include_directories(jlinkrtt PRIVATE
+    ${PROJECT_SOURCE_DIR}/include
+    ${PROJECT_SOURCE_DIR}/third_party/NordicSemiconductor/cmsis
+    ${PROJECT_SOURCE_DIR}/third_party/NordicSemiconductor/config
+    ${PROJECT_SOURCE_DIR}/third_party/NordicSemiconductor/config/${OT_PLATFORM}/config
+    ${PROJECT_SOURCE_DIR}/third_party/NordicSemiconductor/dependencies
+    ${PROJECT_SOURCE_DIR}/third_party/NordicSemiconductor/libraries/app_error
+    ${PROJECT_SOURCE_DIR}/third_party/NordicSemiconductor/nrfx/mdk
+)

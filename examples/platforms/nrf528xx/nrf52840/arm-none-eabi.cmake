@@ -26,67 +26,29 @@
 #  POSSIBILITY OF SUCH DAMAGE.
 #
 
-add_executable(ot-ncp-ftd
-    main.c
-)
+set(CMAKE_SYSTEM_NAME              Generic)
+set(CMAKE_SYSTEM_PROCESSOR         ARM)
 
-add_executable(ot-ncp-mtd
-    main.c
-)
+set(CMAKE_C_COMPILER               arm-none-eabi-gcc)
+set(CMAKE_CXX_COMPILER             arm-none-eabi-g++)
+set(CMAKE_ASM_COMPILER             arm-none-eabi-as)
+set(CMAKE_RANLIB                   arm-none-eabi-ranlib)
 
-add_executable(ot-rcp
-    main.c
-)
-
-set(COMMON_INCLUDES
-    ${OT_PUBLIC_INCLUDES}
-    ${OT_PRIVATE_INCLUDES}
-    ${PROJECT_SOURCE_DIR}/examples/platforms
-    ${PROJECT_SOURCE_DIR}/src/core
-)
-
-target_include_directories(ot-ncp-ftd PRIVATE ${COMMON_INCLUDES})
-target_include_directories(ot-ncp-mtd PRIVATE ${COMMON_INCLUDES})
-target_include_directories(ot-rcp PRIVATE ${COMMON_INCLUDES})
-
-if(OT_BUILTIN_MBEDTLS)
-    target_link_libraries(ot-ncp-ftd
-        openthread-ncp-ftd
-        ${OT_PLATFORM_LIB}
-        openthread-ftd
-        ${OT_PLATFORM_LIB}
-        mbedcrypto
-    )
-
-    target_link_libraries(ot-ncp-mtd
-        openthread-ncp-mtd
-        ${OT_PLATFORM_LIB}
-        openthread-mtd
-        ${OT_PLATFORM_LIB}
-        mbedcrypto
-    )
-else()
-    target_link_libraries(ot-ncp-ftd
-        openthread-ncp-ftd
-        ${OT_PLATFORM_LIB}
-        openthread-ftd
-        ${OT_PLATFORM_LIB}
-    )
-
-    target_link_libraries(ot-ncp-mtd
-        openthread-ncp-mtd
-        ${OT_PLATFORM_LIB}
-        openthread-mtd
-        ${OT_PLATFORM_LIB}
-    )
+set(COMMON_C_FLAGS                 "-mcpu=cortex-m4 -mfloat-abi=hard -mfpu=fpv4-sp-d16 -mthumb -mabi=aapcs -fdata-sections -ffunction-sections")
+if(CMAKE_CXX_COMPILER_VERSION VERSION_GREATER_EQUAL 7)
+    set(CMAKE_C_FLAGS                  "${COMMON_C_FLAGS} -Wno-expansion-to-defined")
 endif()
+set(CMAKE_C_FLAGS                  "${COMMON_C_FLAGS} -std=gnu99")
+set(CMAKE_CXX_FLAGS                "${COMMON_C_FLAGS} -fno-exceptions -fno-rtti")
+set(CMAKE_ASM_FLAGS                "${COMMON_C_FLAGS} -x assembler-with-cpp")
+set(CMAKE_EXE_LINKER_FLAGS         "${COMMON_C_FLAGS} -specs=nano.specs -specs=nosys.specs -Wl,--gc-sections")
 
-target_link_libraries(ot-rcp
-    openthread-rcp
-    ${OT_PLATFORM_LIB}
-    openthread-radio
-    ${OT_PLATFORM_LIB}
-)
+set(CMAKE_C_FLAGS_DEBUG            "-Og")
+set(CMAKE_CXX_FLAGS_DEBUG          "-Og")
+set(CMAKE_ASM_FLAGS_DEBUG          "-Og")
+set(CMAKE_EXE_LINKER_FLAGS_DEBUG   "-Og")
 
-install(TARGETS ot-rcp ot-ncp-ftd ot-ncp-mtd
-    DESTINATION bin)
+set(CMAKE_C_FLAGS_RELEASE          "-Os")
+set(CMAKE_CXX_FLAGS_RELEASE        "-Os")
+set(CMAKE_ASM_FLAGS_RELEASE        "-Os")
+set(CMAKE_EXE_LINKER_FLAGS_RELEASE "-Os")
