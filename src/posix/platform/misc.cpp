@@ -40,8 +40,29 @@
 #include "common/code_utils.hpp"
 #include "common/logging.hpp"
 
-static otPlatResetReason   sPlatResetReason   = OT_PLAT_RESET_REASON_POWER_ON;
+extern jmp_buf gResetJump;
+
+static otPlatResetReason   sPlatResetReason = OT_PLAT_RESET_REASON_POWER_ON;
+bool                       gPlatformPseudoResetWasRequested;
 static otPlatMcuPowerState gPlatMcuPowerState = OT_PLAT_MCU_POWER_STATE_ON;
+
+void otPlatReset(otInstance *aInstance)
+{
+    OT_UNUSED_VARIABLE(aInstance);
+
+    if (gPlatformPseudoResetWasRequested)
+    {
+        sPlatResetReason = OT_PLAT_RESET_REASON_SOFTWARE;
+    }
+    else
+    {
+        otInstanceFinalize(aInstance);
+        otSysDeinit();
+
+        longjmp(gResetJump, 1);
+        assert(false);
+    }
+}
 
 otPlatResetReason otPlatGetResetReason(otInstance *aInstance)
 {

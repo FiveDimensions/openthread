@@ -42,7 +42,8 @@
 #include <openthread/platform/alarm-milli.h>
 #include <openthread/platform/radio.h>
 
-uint64_t gNodeId = 0;
+uint64_t    gNodeId = 0;
+extern bool gPlatformPseudoResetWasRequested;
 
 otInstance *otSysInit(otPlatformConfig *aPlatformConfig)
 {
@@ -141,6 +142,13 @@ int otSysMainloopPoll(otSysMainloopContext *aMainloop)
 {
     int rval;
 
+#if OPENTHREAD_PLATFORM_USE_PSEUDO_RESET
+    gPlatformPseudoResetWasRequested = true;
+    return -2;
+#else // if OPENTHREAD_PLATFORM_USE_PSEUDO_RESET
+    gPlatformPseudoResetWasRequested = false;
+#endif
+
 #if OPENTHREAD_POSIX_VIRTUAL_TIME
     if (timerisset(&aMainloop->mTimeout))
     {
@@ -182,6 +190,7 @@ int otSysMainloopPoll(otSysMainloopContext *aMainloop)
 
 void otSysMainloopProcess(otInstance *aInstance, const otSysMainloopContext *aMainloop)
 {
+    otTaskletsProcess(aInstance);
 #if OPENTHREAD_POSIX_VIRTUAL_TIME
     virtualTimeProcess(aInstance, &aMainloop->mReadFdSet, &aMainloop->mWriteFdSet, &aMainloop->mErrorFdSet);
 #else

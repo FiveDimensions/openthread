@@ -91,7 +91,7 @@ typedef struct PosixConfig
     bool             mIsVerbose;         ///< Whether to print log to stderr.
 } PosixConfig;
 
-static jmp_buf gResetJump;
+jmp_buf gResetJump;
 
 void __gcov_flush();
 
@@ -353,15 +353,6 @@ void otTaskletsSignalPending(otInstance *aInstance)
     OT_UNUSED_VARIABLE(aInstance);
 }
 
-void otPlatReset(otInstance *aInstance)
-{
-    otInstanceFinalize(aInstance);
-    otSysDeinit();
-
-    longjmp(gResetJump, 1);
-    assert(false);
-}
-
 int main(int argc, char *argv[])
 {
     otInstance *instance;
@@ -381,6 +372,8 @@ int main(int argc, char *argv[])
         execvp(argv[0], argv);
     }
 
+pseudo_reset:
+
     instance = InitInstance(argc, argv);
 
 #if OPENTHREAD_POSIX_APP_TYPE == OT_POSIX_APP_TYPE_NCP
@@ -396,8 +389,6 @@ int main(int argc, char *argv[])
     while (true)
     {
         otSysMainloopContext mainloop;
-
-        otTaskletsProcess(instance);
 
         FD_ZERO(&mainloop.mReadFdSet);
         FD_ZERO(&mainloop.mWriteFdSet);
@@ -420,6 +411,10 @@ int main(int argc, char *argv[])
             otxConsoleProcess(&mainloop);
 #endif
         }
+        else if (otSysMainloopPoll(&mainloop) == -2)
+        {
+            break;
+        }
         else if (errno != EINTR)
         {
             perror("select");
@@ -432,6 +427,8 @@ int main(int argc, char *argv[])
 #endif
     otInstanceFinalize(instance);
     otSysDeinit();
+
+    goto pseudo_reset;
 
     return 0;
 }
